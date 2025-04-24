@@ -98,6 +98,11 @@ public class AnimationManager : MonoBehaviour
     {
         Debug.Log("I'm at one frame before to last.");
     }
+
+    private void GetResult()
+    {
+        
+    }
 }
     
 
