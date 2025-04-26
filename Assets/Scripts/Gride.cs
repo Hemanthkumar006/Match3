@@ -62,6 +62,7 @@ public class Gride : MonoBehaviour
     public int score = 0;
     public float Bordersize;
     public Dictionary<int, int> positionDict;
+    private HashSet<(int, int)> busyCoords = new HashSet<(int, int)>();
     private List<GamePiece> adjacentattackpieces = new List<GamePiece>();
     private List<GamePiece> Specialpieces = new List<GamePiece>();
     private List<GamePiece> UpMovingpieces = new List<GamePiece>();
@@ -106,6 +107,7 @@ public class Gride : MonoBehaviour
     private bool inverse = false;
 
     private bool IsStackable;
+    private bool currentlyfilling;
 
     private GamePiece pressedPiece;
     public GamePiece PressedPiece { get { return pressedPiece; } set { pressedPiece = value; } }
@@ -320,6 +322,7 @@ public class Gride : MonoBehaviour
                 yield return new WaitForSeconds(FillTime);
             }
             needsRefill = ClearAllValidMatches();
+            PauseInput = needsRefill;
         }       
 
     }
@@ -647,7 +650,10 @@ public class Gride : MonoBehaviour
             {
                 for (int i = 0; i < horizontalpieces.Count; i++)
                 {
-                    Matchingpieces.Add(horizontalpieces[i]);
+                    if (!Matchingpieces.Contains(horizontalpieces[i]))
+                    {
+                        Matchingpieces.Add(horizontalpieces[i]);
+                    }                    
                     for(int dir = 0; dir <= 1; dir++)
                     {
                         for (int yoffset = 1; yoffset < yDim; yoffset++)
@@ -668,6 +674,10 @@ public class Gride : MonoBehaviour
                             if (pieces[horizontalpieces[i].X, Y].IsColored() && pieces[horizontalpieces[i].X, Y].ColorComponent.Color == color)
                             {
                                 hverticalpieces.Add(pieces[horizontalpieces[i].X, Y]);
+                                if(hverticalpieces.Count >= 2)
+                                {
+                                    break;
+                                }
                             }
                             else
                             {
@@ -684,7 +694,11 @@ public class Gride : MonoBehaviour
                 {
                     for (int j = 0; j < hverticalpieces.Count; ++j)
                     {
-                        Matchingpieces.Add(hverticalpieces[j]);
+                        if (!Matchingpieces.Contains(hverticalpieces[j]))
+                        {
+                            Matchingpieces.Add(hverticalpieces[j]);
+                        }
+                        
                     }
                 }
                 
@@ -726,7 +740,10 @@ public class Gride : MonoBehaviour
             {
                 for (int i = 0; i < verticalpieces.Count; i++)
                 {
-                    Matchingpieces.Add(verticalpieces[i]);
+                    if (!Matchingpieces.Contains(verticalpieces[i]))
+                    {
+                        Matchingpieces.Add(verticalpieces[i]);
+                    }                   
                     for (int dir = 0; dir <= 1; dir++)
                     {
                         for (int xoffset = 1; xoffset < xDim; xoffset++)
@@ -747,6 +764,10 @@ public class Gride : MonoBehaviour
                             if (pieces[X, verticalpieces[i].Y].IsColored() && pieces[X, verticalpieces[i].Y].ColorComponent.Color == color)
                             {
                                 vhorizontalpieces.Add(pieces[X, verticalpieces[i].Y]);
+                                if(vhorizontalpieces.Count >= 2)
+                                {
+                                    break;
+                                }
                             }
                             else
                             {
@@ -763,7 +784,10 @@ public class Gride : MonoBehaviour
                 {
                     for(int i = 0; i< vhorizontalpieces.Count; i++)
                     {
-                        Matchingpieces.Add((vhorizontalpieces[i]));
+                        if (!Matchingpieces.Contains(vhorizontalpieces[i]))
+                        {
+                            Matchingpieces.Add((vhorizontalpieces[i]));
+                        }
                     }
                 }
             }
@@ -804,22 +828,20 @@ public class Gride : MonoBehaviour
                                     break;
                                 }
                             }
-                            StartCoroutine(HandleMultiAnim(match,Sppiece));
-                            hasSppotential = true;
-                            needsRefill = true;
+                            //StartCoroutine(sphandler(match,Sppiece));
+                            //hasSppotential = true;
+                            //needsRefill = true;
                         }
-                        
-                        if (!hasSppotential)
-                        {
-                            for (int i = 0; i < match.Count; i++)
-                            {
-                                if (Clearpiece(match[i].X, match[i].Y))
-                                {
-                                    needsRefill = true;
 
-                                }
+                        for (int i = 0; i < match.Count; i++)
+                        {
+                            if (Clearpiece(match[i].X, match[i].Y))
+                            {
+                                needsRefill = true;
+
                             }
-                        }                       
+                        }
+
                     }
                 }
             }
@@ -847,9 +869,17 @@ public class Gride : MonoBehaviour
             {
                 SpriteRenderer render = item.GetComponent<SpriteRenderer>();
                 render.sortingOrder = 1;
-                item.MovableComponent.Move(Sppiece.X, Sppiece.Y, 0.25f);
+                int itemx = item.X; int itemy = item.Y;
+                item.MovableComponent.Move(Sppiece.X, Sppiece.Y, 0.24f);
                 item.ClearableComponent.Clear();
+                //SpawnNewPiece(itemx, itemy,PieceType.EMPTY);
+
+                Debug.Log("Clearing " + item.name);
                 //SpawnNewPiece(itemX, itemY, PieceType.EMPTY);
+            }
+            else if(item == Sppiece)
+            {
+                Debug.Log("This is sppiece and not destroyed.");
             }
         }
         yield return new WaitForSeconds(0.20f);
@@ -862,7 +892,6 @@ public class Gride : MonoBehaviour
             }
         }*/
         Sppiece.ClearableComponent.Clear();
-        yield return new WaitForSeconds(.15f);
         SpawnNewPiece(SppieceX, SppieceY, PieceType.BUBBLE);
         yield return new WaitForSeconds(.15f);
 
@@ -870,9 +899,61 @@ public class Gride : MonoBehaviour
         {
             int x = coordinates[i].x;  
             int y = coordinates[i].y;
+            if (x == SppieceX && y == SppieceY)
+                continue;
             SpawnNewPiece(x, y, PieceType.EMPTY);
         }
     }
+
+    IEnumerator sphandler(List<GamePiece> m, GamePiece pie)
+    {
+        var coordKey = (pie.X, pie.Y);
+
+        // Prevent duplicate bubble spawns
+        if (busyCoords.Contains(coordKey))
+        {
+            yield break;
+        }
+
+        busyCoords.Add(coordKey);
+
+        List<(int x, int y)> coordlist = new List<(int x, int y)>();
+        int pieX = pie.X, pieY = pie.Y;
+
+        foreach (GamePiece piece in m)
+        {
+            if (piece != pie)
+            {
+                coordlist.Add((piece.X, piece.Y));
+                piece.MovableComponent.Move(pieX, pieY, .25f);
+                piece.ClearableComponent.Clear();
+            }
+        }
+
+        yield return new WaitForSeconds(0.25f);
+        pie.ClearableComponent.Clear();
+        yield return new WaitForSeconds(.15f);
+        // Double-check if the piece is still clear before spawning bubble
+        GamePiece currentPiece = pieces[pieX,pieY];
+        if (currentPiece != null && currentPiece.Type != PieceType.BUBBLE)
+        {
+            SpawnNewPiece(pieX, pieY, PieceType.BUBBLE);
+        }
+
+        for (int i = 0; i < coordlist.Count; i++)
+        {
+            int x = coordlist[i].x;
+            int y = coordlist[i].y;
+
+            if (x == pieX && y == pieY)
+                continue;
+
+            SpawnNewPiece(x, y, PieceType.EMPTY);
+        }
+
+        busyCoords.Remove(coordKey);
+    }
+
     IEnumerator SpSelector(int res,int x,int y)
     {
         yield return new WaitForSeconds(0.14f);
